@@ -1,17 +1,50 @@
 use std::fmt;
 use std::str::FromStr;
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+#[tauri::command(rename_all = "snake_case")]
+fn summ_matrix(matrix_string1: String, matrix_string2: String) -> Result<String, String> {
+    println!("{matrix_string1}\n{matrix_string2}");
+    let matrix1 = Matrix::from_str(&matrix_string1)?;
+    let matrix2 = Matrix::from_str(&matrix_string2)?;
+    let matrix3 = match matrix1 + matrix2 {
+        Ok(res) => Ok(res.to_string()),
+        Err(e) => Err(e)
+    };
+
+    matrix3
+}
+
+#[tauri::command(rename_all = "snake_case")]
+fn div_matrix(matrix_string1: String, matrix_string2: String) -> Result<String, String> {
+    println!("{matrix_string1}\n{matrix_string2}");
+    let matrix1 = Matrix::from_str(&matrix_string1)?;
+    let matrix2 = Matrix::from_str(&matrix_string2)?;
+    let matrix3 = match matrix1 - matrix2 {
+        Ok(res) => Ok(res.to_string()),
+        Err(e) => Err(e)
+    };
+
+    matrix3
+}
+
+#[tauri::command(rename_all = "snake_case")]
+fn mul_matrix(matrix_string1: String, matrix_string2: String) -> Result<String, String> {
+    println!("{matrix_string1}\n{matrix_string2}");
+    let matrix1 = Matrix::from_str(&matrix_string1)?;
+    let matrix2 = Matrix::from_str(&matrix_string2)?;
+    let matrix3 = match matrix1 * matrix2 {
+        Ok(res) => Ok(res.to_string()),
+        Err(e) => Err(e)
+    };
+
+    matrix3
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![summ_matrix, mul_matrix, div_matrix])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -34,7 +67,7 @@ impl Matrix {
 
     fn determinant(&self) -> Result<f64, String> {
         if self.rows != self.cols {
-            return Err("Determinant can only be calculated for square matrices".to_string());
+            return Err("Определитель может быть вычислен только для квадратной матрицы".to_string());
         }
 
         if self.rows == 1 {
@@ -76,7 +109,7 @@ impl Matrix {
     fn inverse(&self) -> Result<Matrix, String> {
         let det = self.determinant()?;
         if det == 0.0 {
-            return Err("Matrix is not invertible (determinant is 0)".to_string());
+            return Err("У данной матрицы нет обратной матрицы(определитель равен нулю)".to_string());
         }
 
         if self.rows == 1 {
@@ -116,7 +149,7 @@ impl Matrix {
 
     fn gaussian_elimination(&self) -> Result<Vec<f64>, String> {
         if self.rows + 1 != self.cols {
-            return Err("Invalid matrix dimensions for Gaussian elimination".to_string());
+            return Err("У матрицы неправильная размерность для метода Гаусса".to_string());
         }
 
         let mut augmented_matrix = self.clone(); // Работаем с копией, чтобы не изменять исходную матрицу
@@ -175,7 +208,7 @@ impl Matrix {
         let det_a = core_matrix.determinant()?; // Определитель основной матрицы
 
         if det_a == 0.0 {
-            return Err("System has no unique solution (determinant is 0)".to_string());
+            return Err("Система не имеет решений(определитель равен нулю)".to_string());
         }
 
         let mut solutions = vec![0.0; n];
@@ -198,12 +231,12 @@ impl FromStr for Matrix {
         let rows: Vec<&str> = s.trim().split('\n').collect();
         let rows_count = rows.len();
         if rows_count == 0 {
-            return Err("Empty matrix string".to_string());
+            return Err("Матрица пуста".to_string());
         }
 
         let cols_count = rows[0].trim().split_whitespace().count();
         if cols_count == 0 {
-            return Err("Empty matrix row".to_string());
+            return Err("Матрица пуста".to_string());
         }
 
         let mut data = Vec::with_capacity(rows_count);
@@ -211,10 +244,10 @@ impl FromStr for Matrix {
             let row: Vec<f64> = row_str // Изменено на f64
                 .trim()
                 .split_whitespace()
-                .map(|s| s.parse().map_err(|_| "Invalid number in matrix".to_string()))
+                .map(|s| s.parse().map_err(|_| "Неправильное значение в матрице".to_string()))
                 .collect::<Result<_, _>>()?;
             if row.len() != cols_count {
-                return Err("Inconsistent number of columns".to_string());
+                return Err("Неправильное количество символов в строке матрицы".to_string());
             }
             data.push(row);
         }
@@ -255,7 +288,7 @@ impl std::ops::Add for Matrix {
 
     fn add(self, other: Matrix) -> Self::Output {
         if self.rows != other.rows || self.cols != other.cols {
-            return Err("Matrices have different dimensions".to_string());
+            return Err("Матрицы разной размерности".to_string());
         }
 
         let mut result = Matrix::new(self.rows, self.cols);
@@ -274,7 +307,7 @@ impl std::ops::Sub for Matrix {
 
     fn sub(self, other: Matrix) -> Self::Output {
         if self.rows != other.rows || self.cols != other.cols {
-            return Err("Matrices have different dimensions".to_string());
+            return Err("Матрицы разной размерности".to_string());
         }
 
         let mut result = Matrix::new(self.rows, self.cols);
@@ -307,7 +340,7 @@ impl std::ops::Mul for Matrix {
 
     fn mul(self, other: Matrix) -> Self::Output {
         if self.cols != other.rows {
-            return Err("Matrices cannot be multiplied due to incompatible dimensions".to_string());
+            return Err("У матриц не подходят размерности".to_string());
         }
 
         let mut result = Matrix::new(self.rows, other.cols);
